@@ -11,24 +11,29 @@ interface Balance {
 @EntityRepository(Transaction)
 class TransactionsRepository extends Repository<Transaction> {
   public async getBalance(): Promise<Balance> {
-    const allTransactions = await this.find();
+    const balance = (await this.find()).reduce(
+      (accumulator: Balance, current: Transaction) => {
+        switch (current.type) {
+          case 'income':
+            accumulator.income += Number(current.value);
+            accumulator.total += Number(current.value);
+            break;
+          case 'outcome':
+            accumulator.outcome += Number(current.value);
+            accumulator.total -= Number(current.value);
+            break;
+          default:
+            throw Error('Type is not defined');
+        }
 
-    const income = allTransactions
-      .filter(transaction => transaction.type === 'income')
-      .reduce((totalIncome, transaction) => totalIncome + transaction.value, 0);
-
-    const outcome = allTransactions
-      .filter(transaction => transaction.type === 'outcome')
-      .reduce(
-        (totalOutcome, transaction) => totalOutcome + transaction.value,
-        0,
-      );
-
-    const balance = {
-      income,
-      outcome,
-      total: income - outcome,
-    };
+        return accumulator;
+      },
+      {
+        income: 0,
+        outcome: 0,
+        total: 0,
+      },
+    );
 
     return balance;
   }

@@ -2,29 +2,24 @@ import { Router } from 'express';
 import { getCustomRepository } from 'typeorm';
 import multer from 'multer';
 
-import uploadConfig from '../configs/uploadConfig';
-
 import TransactionsRepository from '../repositories/TransactionsRepository';
 import CreateTransactionService from '../services/CreateTransactionService';
 import DeleteTransactionService from '../services/DeleteTransactionService';
 import ImportTransactionsService from '../services/ImportTransactionsService';
 
-const transactionsRouter = Router();
+import uploadConfig from '../configs/uploadConfig';
+
 const upload = multer(uploadConfig);
 
+const transactionsRouter = Router();
+
 transactionsRouter.get('/', async (request, response) => {
-  const transactionsRepository = getCustomRepository(TransactionsRepository);
+  const transactionRepository = getCustomRepository(TransactionsRepository);
 
-  const allTransactions = await transactionsRepository.find({
-    relations: ['category'],
-  });
+  const transactions = await transactionRepository.find();
+  const balance = await transactionRepository.getBalance();
 
-  const balance = await transactionsRepository.getBalance();
-
-  return response.json({
-    transactions: allTransactions,
-    balance,
-  });
+  return response.json({ transactions, balance });
 });
 
 transactionsRouter.post('/', async (request, response) => {
@@ -39,7 +34,7 @@ transactionsRouter.post('/', async (request, response) => {
     category,
   });
 
-  return response.json(transaction);
+  return response.status(201).json(transaction);
 });
 
 transactionsRouter.delete('/:id', async (request, response) => {
@@ -56,9 +51,9 @@ transactionsRouter.post(
   '/import',
   upload.single('file'),
   async (request, response) => {
-    const importTransactions = new ImportTransactionsService();
+    const importTransaction = new ImportTransactionsService();
 
-    const transactions = await importTransactions.execute(request.file.path);
+    const transactions = await importTransaction.execute(request.file.path);
 
     return response.json(transactions);
   },
